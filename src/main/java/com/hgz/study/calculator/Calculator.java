@@ -4,9 +4,9 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Stack;
 
+import javax.management.RuntimeOperationsException;
 import javax.swing.*;
 
 /**
@@ -17,8 +17,6 @@ import javax.swing.*;
  * @Motifiedy by:
  */
 public class Calculator extends JFrame{
-    private static final int DEFAULT_WIDTH = 400;
-    private static final int DEFAULT_HEIGHT = 300;
     private static final String DEFAULT_TITLE = "JAVA Calcultor";
     public Calculator() {
         DisplayPannel display = new DisplayPannel();
@@ -138,24 +136,106 @@ class CalPannel extends  JPanel {
         b.addActionListener(action);
         this.add(b);
     }
-    private  String calCMDString(String cmd) {
+    private String calCMDString(String cmd) {
+        String calResult;
+        try{
+            calResult = calCMDString0(cmd);
+        } catch (ArithmeticException e) {
+            calResult = "error";
+            System.out.println(e.toString());
+        }
+        return  calResult;
+    }
+    private  String calCMDString0(String cmd) throws ArithmeticException{
         Stack<Double> dataStack = new Stack<>();
         Stack<Character>  opStack = new Stack<>();
+        ArrayList<Double> data = new ArrayList<>();
+        ArrayList<Character> op = new ArrayList<>();
+        if (isOperationCharacter(cmd.charAt(cmd.length()-1))) {
+            cmd = cmd.substring(0,cmd.length());
+        }
         int pre = 0,cur = 0;
         for (; cur < cmd.length(); cur++) {
-            if (isOperation(cmd.charAt(cur))) {
-
+            if (isOperationCharacter(cmd.charAt(cur))) {
+                data.add(Double.parseDouble(cmd.substring(pre,cur)));
+                pre = cur+1;
+                op.add(cmd.charAt(cur));
             }
         }
-        if (cur != pre) dataArray.add(cmd.substring(pre,cur));
-        System.out.println(dataArray.toString());
-        return "error";
+        if (cur != pre) {
+            data.add(Double.parseDouble(cmd.substring(pre,cur)));
+        } else {
+            op.remove(op.size()-1);
+        }
+        dataStack.push(data.get(0));
+        for (int i = 0,j = 1; i < op.size() ; i++) {
+            if (opStack.isEmpty()) {
+                opStack.push(op.get(i));
+                dataStack.push(data.get(j++));
+            } else {
+                int priority = compareOperatPriority(op.get(i), opStack.peek());
+                if  (priority > 0) {
+                    double top = compute(dataStack.peek(),data.get(j++),op.get(i));
+                    dataStack.pop();
+                    dataStack.push(top);
+                } else {
+                    double a = dataStack.peek();
+                    dataStack.pop();
+                    double b = dataStack.peek();
+                    dataStack.pop();
+                    dataStack.push(compute(b, a, opStack.peek()));
+                    dataStack.push(data.get(j++));
+                    opStack.pop();
+                    opStack.push(op.get(i));
+                }
+            }
+        }
+        if (!opStack.isEmpty()) {
+            double a = dataStack.peek();
+            dataStack.pop();
+            double b = dataStack.peek();
+            dataStack.pop();
+            dataStack.push(compute(b, a, opStack.peek()));
+        }
+        String calResult = dataStack.peek().toString();
+        if(calResult.indexOf(".") > 0){
+            calResult = calResult.replaceAll("0+?$", "");
+            calResult = calResult.replaceAll("[.]$", "");
+        }
+        return  calResult;
     }
-    private boolean isOperation(char c) {
+    private boolean isOperationCharacter(char c) {
         if (c == '+' || c == '-' || c == '*' || c == '/'  ) {
             return true;
         } else {
             return false;
+        }
+    }
+    private double compute(Double a, Double b, Character op) throws   ArithmeticException{
+        if ( op == '+') {
+            return  a + b;
+        } else if (op == '-') {
+            return  a - b;
+        } else if (op == '*') {
+            return  a * b;
+        } else {
+            if (b == 0) throw new ArithmeticException("divide by zero");
+            return  a / b;
+        }
+    }
+    private int compareOperatPriority(char a, char b) {
+        if ( a == '+' || a == '-') {
+            if (b == '+' || b == '-') {
+                return 0;
+            } else {
+                return -1;
+            }
+        } else {
+            if (b == '+' || b == '-') {
+                return 1;
+            } else {
+                return 0;
+            }
         }
     }
 }
