@@ -3,6 +3,9 @@ package com.hgz.study.calculator;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Stack;
 
 import javax.swing.*;
 
@@ -41,9 +44,44 @@ public class Calculator extends JFrame{
 }
 class DisplayPannel extends  JPanel {
     private  JTextField display;
+    private  enum DisplayState {BEGINSTATE,ZEROPREFIX,NORMALSTATE};
+    private  DisplayState displayState;
+    private  boolean floatPointState = false;
     public DisplayPannel() {
         display = new JTextField(40);
+        displayState = DisplayState.BEGINSTATE;
         init();
+    }
+    public  void appendText(String text) {
+        if (displayState == DisplayState.BEGINSTATE
+                && text.charAt(0) >= '0' && text.charAt(0) <= '9') {
+                if(text.charAt(0) == '0' && this.getText().length() == 0) {
+                    displayState = DisplayState.ZEROPREFIX;
+                } else {
+                    displayState = DisplayState.NORMALSTATE;
+                }
+        } else if (displayState == DisplayState.ZEROPREFIX
+                && (text.charAt(0) < '0' || text.charAt(0) > '9')) {
+                displayState = DisplayState.BEGINSTATE;
+                if (text.charAt(0) == '.') {
+                    floatPointState = true;
+                }
+        } else if (displayState == DisplayState.NORMALSTATE){
+               if (text.charAt(0) == '.' && floatPointState) {
+                       return;
+               }
+               if (text.charAt(0) < '0' || text.charAt(0) > '9') {
+                   displayState = DisplayState.BEGINSTATE;
+                   if (text.charAt(0) == '.') {
+                       floatPointState = true;
+                   } else {
+                       floatPointState = false;
+                   }
+               }
+        } else {
+            return;
+        }
+        this.setText(this.getText() + text);
     }
     public void setText(String text){
         this.display.setText(text);
@@ -52,11 +90,11 @@ class DisplayPannel extends  JPanel {
         return display.getText();
     }
     public void clearText() {
+        displayState = DisplayState.BEGINSTATE;
+        floatPointState = false;
         display.setText("");
     }
     private void init() {
-        //this.setLayout(new FlowLayout());
-        //display.setComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT );
         display.setHorizontalAlignment(SwingConstants.RIGHT);
         this.add(display);
         JButton clearButton = new JButton("clear");
@@ -77,27 +115,7 @@ class CalPannel extends  JPanel {
     }
     private void init() {
         this.setLayout(new GridLayout(4,4,5,10));
-        ActionListener insertAction = new ActionListener() {
-            private boolean numBefore = true;
-            private boolean zeroBefore = false;
-            public void actionPerformed(ActionEvent e) {
-                char c = e.getActionCommand().charAt(0);
-                String curText = displayPanel.getText();
-                if (curText.isEmpty() && (c > '9' || c < '0')) return;
-                if (c  == '0') {
-                    if(zeroBefore == true) return;
-                    zeroBefore  = true;
-                }
-                if (c > '9' || c < '0') {
-                    if (numBefore == false ) return;
-                    numBefore = false;
-                    zeroBefore = false;
-                } else {
-                    numBefore = true;
-                }
-                displayPanel.setText(curText + e.getActionCommand());
-            }
-        };
+        ActionListener insertAction = e -> displayPanel.appendText(e.getActionCommand());
         ActionListener calAction = e -> displayPanel.setText(calCMDString(displayPanel.getText()));
         addButton(new JButton("9"),insertAction);
         addButton(new JButton("8"),insertAction);
@@ -121,6 +139,23 @@ class CalPannel extends  JPanel {
         this.add(b);
     }
     private  String calCMDString(String cmd) {
+        Stack<Double> dataStack = new Stack<>();
+        Stack<Character>  opStack = new Stack<>();
+        int pre = 0,cur = 0;
+        for (; cur < cmd.length(); cur++) {
+            if (isOperation(cmd.charAt(cur))) {
+
+            }
+        }
+        if (cur != pre) dataArray.add(cmd.substring(pre,cur));
+        System.out.println(dataArray.toString());
         return "error";
+    }
+    private boolean isOperation(char c) {
+        if (c == '+' || c == '-' || c == '*' || c == '/'  ) {
+            return true;
+        } else {
+            return false;
+        }
     }
 }
